@@ -33,3 +33,7 @@ build/
 # Другие временные файлы
 *.tmp
 *.bak
+
+# results
+results/
+uploads/
