@@ -1,0 +1,34 @@
+import os
+import zipfile
+import shutil
+from PIL import Image
+import base64
+from io import BytesIO
+
+
+def extract_archive(archive_path: str, extract_to: str):
+    os.makedirs(extract_to, exist_ok=True)
+    if archive_path.endswith(".zip"):
+        with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+            zip_ref.extractall(extract_to)
+    elif archive_path.endswith(".rar"):
+        raise NotImplementedError("RAR extraction not implemented (install unrar lib or use .zip)")
+    else:
+        raise ValueError("Unsupported archive type.")
+
+
+def create_archive(folder_path: str, output_path: str):
+    shutil.make_archive(output_path.replace('.zip', ''), 'zip', folder_path)
+
+
+def get_preview_images(folder_path: str, limit: int = 5):
+    images = []
+    for filename in sorted(os.listdir(folder_path)):
+        if filename.lower().endswith((".jpg", ".jpeg", ".png")):
+            full_path = os.path.join(folder_path, filename)
+            with open(full_path, "rb") as image_file:
+                encoded = base64.b64encode(image_file.read()).decode('utf-8')
+                images.append(f"data:image/png;base64,{encoded}")
+            if len(images) >= limit:
+                break
+    return images

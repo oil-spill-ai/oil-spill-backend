@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+
+# Виртуальное окружение
+venv/
+env/
+.venv/
+.env/
+
+# Логи
+*.log
+
+# Пакеты
+*.egg-info/
+dist/
+build/
+
+# Конфигурационные файлы
+*.env
+*.local
+
+# IDE и редакторы
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Другие временные файлы
+*.tmp
+*.bak
+
+# results
+results/
+uploads/
