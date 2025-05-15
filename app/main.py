@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 
-from app.api import router
+from api import router
 
 app = FastAPI(title="Oil Spill Detection Backend")
 

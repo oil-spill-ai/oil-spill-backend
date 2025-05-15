@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Request
 from fastapi.responses import FileResponse
-from app.utils import extract_archive, create_archive, get_preview_images
-from app.ml_client import run_mock_model
+from utils import extract_archive, create_archive, get_preview_images
+from ml_client import run_mock_model
 import os
 import uuid
 import shutil
