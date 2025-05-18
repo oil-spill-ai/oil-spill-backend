@@ -62,14 +62,13 @@ def send_to_ml_service(file_path: str, user_hash: str) -> str:
 def create_result_archive(user_hash: str) -> Path:
     user_dir = get_user_dir(user_hash)
     result_files = []
-    # Собираем файлы для архивации, удаляя префиксы
+    archive_name = f"result_{user_hash}.zip"
     for file in user_dir.iterdir():
-        if file.name.startswith(f"result_"):
-            new_name = file.name.replace(f"result_", "").replace(f"_{user_hash}", "")
+        if file.name.startswith("result_") and file.name != archive_name:
+            new_name = file.name.replace("result_", "").replace(f"_{user_hash}", "")
             result_files.append((file, new_name))
-    # Создаём архив
-    result_archive = user_dir / f"result_{user_hash}.zip"
+    result_archive = user_dir / archive_name
     with zipfile.ZipFile(result_archive, 'w') as zipf:
         for file, new_name in result_files:
-            zipf.write(file, arcname=new_name)  # Используем новый путь (без префиксов)
+            zipf.write(file, arcname=new_name)
     return result_archive
