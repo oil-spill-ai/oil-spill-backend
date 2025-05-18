@@ -1,1 +1,0 @@
-This file in folder "test" for adding a new branch "feature/celery-processing" (by Artyom)

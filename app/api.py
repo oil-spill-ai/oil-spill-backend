@@ -1,8 +1,9 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Request
 from fastapi.responses import FileResponse
-from utils import extract_archive, create_archive, get_preview_images
-from ml_client import run_mock_model
+from utils import extract_archive, create_archive #, get_preview_images
+# from ml_client import run_mock_model
 from tasks import process_image
+from celery.result import AsyncResult
 import os
 import uuid
 import shutil
@@ -41,12 +42,11 @@ async def upload_archive(request: Request, file: UploadFile = File(...)):
             detail=f"Invalid file type: {file.content_type}. Expected a zip archive."
         )
 
-    # Генерация job_id
+    # Генерация job_id и путей
     job_id = str(uuid.uuid4())
     archive_path = os.path.join(UPLOAD_DIR, f"{job_id}_{file.filename}")
 
     # Сохраняем архив
-    archive_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{file.filename}")
     with open(archive_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
@@ -55,26 +55,28 @@ async def upload_archive(request: Request, file: UploadFile = File(...)):
     extract_archive(archive_path, extract_dir)
 
     # Постановка задач в Celery
+    task_ids = []
     for filename in os.listdir(extract_dir):
         if filename.lower().endswith((".jpg", ".jpeg", ".png")):
             file_path = os.path.join(extract_dir, filename)
-            process_image.delay(job_id, file_path)
+            task = process_image.delay(job_id, file_path)
+            task_ids.append(task.id)
 
     # Заглушка — ML-модель
-    run_mock_model(extract_dir)
+    # run_mock_model(extract_dir)
 
     # Архивируем результат
-    result_zip_path = os.path.join(RESULT_DIR, f"{uuid.uuid4()}_result.zip")
+    result_zip_path = os.path.join(RESULT_DIR, f"{job_id}_result.zip")
     create_archive(extract_dir, result_zip_path)
 
-    # Генерация предпросмотра
-    preview_images = get_preview_images(extract_dir)
+    # # Генерация предпросмотра
+    # preview_images = get_preview_images(extract_dir)
 
     return {
-        "archive_url": f"/download/{os.path.basename(result_zip_path)}",
-        "preview_images": preview_images,
         "job_id": job_id,
-        "status": "processing_started",
+        "task_ids": task_ids,
+        "archive_url": f"/download/{os.path.basename(result_zip_path)}",
+        "status": "processing_started"
     }
 
 
@@ -84,3 +86,13 @@ def download_result(filename: str):
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(file_path, filename=filename)
+
+
+@router.get("/task/{task_id}")
+def get_task_status(task_id: str):
+    task = AsyncResult(task_id)
+    return {
+        "task_id": task_id,
+        "status": task.status,
+        "result": task.result if task.ready() else None
+    }

@@ -6,7 +6,10 @@ import os
 
 from api import router
 
-app = FastAPI(title="Oil Spill Detection Backend")
+app = FastAPI(
+    title="Oil Spill Detection Backend",
+    max_upload_size=100_000_000  # 100MB
+)
 
 app.add_middleware(
     CORSMiddleware,
