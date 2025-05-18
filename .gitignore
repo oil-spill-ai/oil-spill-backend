@@ -37,3 +37,5 @@ build/
 # results
 results/
 uploads/
+
+.DS_Store
