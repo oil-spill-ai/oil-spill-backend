@@ -28,10 +28,11 @@ async def save_and_extract_archive(upload_file, user_dir: Path, user_hash: str):
             # Пропустить директории и служебные файлы
             if member.endswith('/') or '__MACOSX' in member or member.startswith('.'):
                 continue
-            ext = os.path.splitext(member)[1].lower()
+            filename = os.path.basename(member)
+            ext = os.path.splitext(filename)[1].lower()
             if ext in ['.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff']:
                 # Переименование файла с добавлением user_hash в имя
-                new_filename = f"{os.path.splitext(member)[0]}_{user_hash}{ext}"
+                new_filename = f"{os.path.splitext(filename)[0]}_{user_hash}{ext}"
                 out_path = user_dir / new_filename
                 with zip_ref.open(member) as source, open(out_path, 'wb') as target:
                     shutil.copyfileobj(source, target)
