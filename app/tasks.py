@@ -1,17 +1,17 @@
-# задача Celery, которая управляет процессом обработки изображений
+from .celery_worker import celery_app
+from .utils import send_to_ml_service, create_result_archive
+import os
 
-from celery import Celery
-from .services import process_image_with_yolo
-
-celery_app = Celery('tasks', broker='redis://localhost:6379/0')
-
-@celery_app.task
-def process_images_task(job_id: str):
-    try:
-        job_dir = Path("/tmp/uploads") / job_id
-        images = list(job_dir.glob("*.jpg"))
-        for image in images:
-            process_image_with_yolo(image)
-        r.set(job_id, "Processed")
-    except Exception as e:
-        r.set(job_id, f"Error: {str(e)}")
+@celery_app.task(bind=True)
+def process_archive_task(self, user_hash, file_paths):
+    processed_files = []
+    errors = []
+    for file_path in file_paths:
+        try:
+            result_img_path = send_to_ml_service(file_path, user_hash)
+            processed_files.append(result_img_path)
+        except Exception as e:
+            errors.append({"file": file_path, "error": str(e)})
+    # Собрать архив с результатами
+    archive_path = create_result_archive(user_hash)
+    return {"archive": str(archive_path), "processed_files": processed_files, "errors": errors}
