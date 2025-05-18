@@ -2,6 +2,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Request
 from fastapi.responses import FileResponse
 from utils import extract_archive, create_archive, get_preview_images
 from ml_client import run_mock_model
+from tasks import process_image
 import os
 import uuid
 import shutil
@@ -10,8 +11,10 @@ router = APIRouter()
 
 UPLOAD_DIR = "uploads"
 RESULT_DIR = "results"
+MEDIA_DIR = "media"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(RESULT_DIR, exist_ok=True)
+os.makedirs(MEDIA_DIR, exist_ok=True)
 
 
 @router.post("/upload/")
@@ -38,6 +41,10 @@ async def upload_archive(request: Request, file: UploadFile = File(...)):
             detail=f"Invalid file type: {file.content_type}. Expected a zip archive."
         )
 
+    # Генерация job_id
+    job_id = str(uuid.uuid4())
+    archive_path = os.path.join(UPLOAD_DIR, f"{job_id}_{file.filename}")
+
     # Сохраняем архив
     archive_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{file.filename}")
     with open(archive_path, "wb") as buffer:
@@ -46,6 +53,12 @@ async def upload_archive(request: Request, file: UploadFile = File(...)):
     # Распаковка архива
     extract_dir = archive_path + "_extracted"
     extract_archive(archive_path, extract_dir)
+
+    # Постановка задач в Celery
+    for filename in os.listdir(extract_dir):
+        if filename.lower().endswith((".jpg", ".jpeg", ".png")):
+            file_path = os.path.join(extract_dir, filename)
+            process_image.delay(job_id, file_path)
 
     # Заглушка — ML-модель
     run_mock_model(extract_dir)
@@ -60,6 +73,8 @@ async def upload_archive(request: Request, file: UploadFile = File(...)):
     return {
         "archive_url": f"/download/{os.path.basename(result_zip_path)}",
         "preview_images": preview_images,
+        "job_id": job_id,
+        "status": "processing_started",
     }
 
 

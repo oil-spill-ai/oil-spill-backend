@@ -13,3 +13,5 @@ typing_extensions==4.13.1
 uvicorn==0.34.0
 python-multipart==0.0.9
 pillow==10.3.0
+celery==5.3.6
+redis==5.0.1
