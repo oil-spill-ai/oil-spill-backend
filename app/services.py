@@ -8,9 +8,11 @@ from pathlib import Path
 from fastapi import UploadFile, File
 from .tasks import process_images_task
 import requests
+import redis
 
 UPLOAD_DIR = Path("/tmp/uploads")
 RESULT_DIR = Path("/tmp/results")
+r = redis.Redis(host='localhost', port=6379, db=0)
 
 async def upload_file(file: UploadFile = File(...)):
     file_path = UPLOAD_DIR / file.filename
@@ -27,10 +29,17 @@ def process_image_with_yolo(image_path: Path):
     url = "http://yolo_microservice_url/process_image"
     with open(image_path, "rb") as image_file:
         response = requests.post(url, files={"image": image_file})
+
     if response.status_code == 200:
         result_path = RESULT_DIR / image_path.name
         with open(result_path, "wb") as f:
             f.write(response.content)
+
+async def get_status(job_id: str):
+    status = r.get(job_id)
+    if status is None:
+        return {"status": "Task not found"}
+    return {"status": status.decode("utf-8")}
 
 async def get_status(job_id: str):
     status = r.get(job_id)
