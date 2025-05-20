@@ -70,6 +70,8 @@ def send_to_ml_service(file_path: str, user_hash: str) -> str:
         raise Exception(f"ML service error: {response.status_code}, {response.text}")
 
 def create_result_archive(user_hash: str) -> Path:
+    from .delete_tasks import delete_file_task, get_meta_path
+    import time
     user_dir = get_user_dir(user_hash)
     result_files = []
     archive_name = f"result_{user_hash}.zip"
@@ -87,4 +89,10 @@ def create_result_archive(user_hash: str) -> Path:
             os.remove(file)
         except Exception as e:
             print(f"[WARN] Не удалось удалить обработанный файл {file}: {e}")
+    # Сохраняем время создания архива в meta-файл
+    meta_path = get_meta_path(result_archive)
+    with open(meta_path, 'w') as f:
+        f.write(str(int(time.time())))
+    # Ставим задачу на удаление архива через 10 минут
+    delete_file_task.apply_async(args=[str(result_archive)], countdown=600)
     return result_archive

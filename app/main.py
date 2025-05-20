@@ -10,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from .tasks import process_archive_task
 from .utils import save_and_extract_archive, make_user_hash, create_result_archive, get_user_dir
+from .delete_tasks import get_meta_path
+import time
 
 app = FastAPI()
 
@@ -52,3 +54,21 @@ def get_status(job_id: str):
     from .celery_worker import celery_app
     result = AsyncResult(job_id, app=celery_app)
     return {"status": result.status, "result": result.result}
+
+@app.get("/api/archive_time_left/{user_hash}")
+def archive_time_left(user_hash: str):
+    user_dir = get_user_dir(user_hash)
+    archive_path = user_dir / f"result_{user_hash}.zip"
+    meta_path = get_meta_path(archive_path)
+    if not archive_path.exists() or not meta_path.exists():
+        return {"seconds_left": 0}
+    try:
+        with open(meta_path, 'r') as f:
+            created_at = int(f.read().strip())
+    except Exception:
+        return {"seconds_left": 0}
+    now = int(time.time())
+    seconds_left = 600 - (now - created_at)
+    if seconds_left < 0:
+        seconds_left = 0
+    return {"seconds_left": seconds_left}
