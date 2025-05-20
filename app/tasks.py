@@ -27,7 +27,7 @@ def process_image(job_id: str, file_path: str):
             )
 
         if response.status_code == 200:
-            # Сохранение результата
+            # Сохраняем результат
             output_path = output_dir / Path(file_path).name
             with open(output_path, 'wb') as out_file:
                 out_file.write(response.content)
@@ -35,12 +35,12 @@ def process_image(job_id: str, file_path: str):
             return {
                 "status": "success",
                 "job_id": job_id,
-                "processed_path": output_path
+                "processed_path": str(output_path)
             }
 
         return {
             "status": "error",
-            "error": f"ML service returned {response.status_code}",
+            "error": f"ML service error: {response.status_code}",
             "details": response.text
         }
 

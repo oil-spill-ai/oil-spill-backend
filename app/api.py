@@ -1,7 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Request
 from fastapi.responses import FileResponse
-from utils import extract_archive, create_archive #, get_preview_images
-# from ml_client import run_mock_model
+from utils import extract_archive, create_archive
 from tasks import process_image
 from celery.result import AsyncResult
 import os
@@ -20,6 +19,7 @@ os.makedirs(MEDIA_DIR, exist_ok=True)
 
 @router.post("/upload/")
 async def upload_archive(request: Request, file: UploadFile = File(...)):
+
     # Проверка на тип запроса (Content-Type)
     content_type = request.headers.get("Content-Type", "")
     if "multipart/form-data" not in content_type:
@@ -62,15 +62,10 @@ async def upload_archive(request: Request, file: UploadFile = File(...)):
             task = process_image.delay(job_id, file_path)
             task_ids.append(task.id)
 
-    # Заглушка — ML-модель
-    # run_mock_model(extract_dir)
 
     # Архивируем результат
     result_zip_path = os.path.join(RESULT_DIR, f"{job_id}_result.zip")
     create_archive(extract_dir, result_zip_path)
-
-    # # Генерация предпросмотра
-    # preview_images = get_preview_images(extract_dir)
 
     return {
         "job_id": job_id,
