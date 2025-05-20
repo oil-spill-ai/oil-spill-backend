@@ -37,6 +37,11 @@ async def save_and_extract_archive(upload_file, user_dir: Path, user_hash: str):
                 with zip_ref.open(member) as source, open(out_path, 'wb') as target:
                     shutil.copyfileobj(source, target)
                 extracted_files.append(out_path)
+    # Удаляем архив после разархивирования
+    try:
+        os.remove(archive_path)
+    except Exception as e:
+        print(f"[WARN] Не удалось удалить архив {archive_path}: {e}")
     return extracted_files
 
 def send_to_ml_service(file_path: str, user_hash: str) -> str:
@@ -55,6 +60,11 @@ def send_to_ml_service(file_path: str, user_hash: str) -> str:
             raise Exception(f"ML service returned invalid image: content-type={content_type}, size={len(response.content)}")
         with open(result_path, "wb") as out:
             out.write(response.content)
+        # Удаляем исходный файл после отправки и получения результата
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            print(f"[WARN] Не удалось удалить файл {file_path}: {e}")
         return str(result_path)
     else:
         raise Exception(f"ML service error: {response.status_code}, {response.text}")
@@ -71,4 +81,10 @@ def create_result_archive(user_hash: str) -> Path:
     with zipfile.ZipFile(result_archive, 'w') as zipf:
         for file, new_name in result_files:
             zipf.write(file, arcname=new_name)
+    # После создания архива удалить обработанные файлы
+    for file, _ in result_files:
+        try:
+            os.remove(file)
+        except Exception as e:
+            print(f"[WARN] Не удалось удалить обработанный файл {file}: {e}")
     return result_archive
