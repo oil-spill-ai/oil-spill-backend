@@ -1,6 +1,6 @@
 from .celery_worker import celery_app
 from .utils import send_to_ml_service, create_result_archive
-import os
+from . import delete_tasks  # ВАЖНО: импортируем задачи для регистрации в celery
 
 @celery_app.task(bind=True)
 def process_archive_task(self, user_hash, file_paths):

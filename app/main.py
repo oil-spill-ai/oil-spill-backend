@@ -13,6 +13,8 @@ from .utils import save_and_extract_archive, make_user_hash, create_result_archi
 from .delete_tasks import get_meta_path
 import time
 
+ARCHIVE_LIFETIME_SECONDS = 600  # Синхронизировано с utils.py
+
 app = FastAPI()
 
 # CORS (настройте под свой фронт)
@@ -68,7 +70,7 @@ def archive_time_left(user_hash: str):
     except Exception:
         return {"seconds_left": 0}
     now = int(time.time())
-    seconds_left = 600 - (now - created_at)
+    seconds_left = ARCHIVE_LIFETIME_SECONDS - (now - created_at)
     if seconds_left < 0:
         seconds_left = 0
     return {"seconds_left": seconds_left}

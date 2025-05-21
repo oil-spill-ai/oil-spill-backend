@@ -7,6 +7,8 @@ import aiofiles
 import shutil
 import requests
 
+ARCHIVE_LIFETIME_SECONDS = 600  # Синхронизировано с main.py
+
 def make_user_hash():
     # Можно заменить на более сложный, если нужно
     return hashlib.sha256(str(uuid.uuid4()).encode()).hexdigest()[:16]
@@ -94,5 +96,5 @@ def create_result_archive(user_hash: str) -> Path:
     with open(meta_path, 'w') as f:
         f.write(str(int(time.time())))
     # Ставим задачу на удаление архива через 10 минут
-    delete_file_task.apply_async(args=[str(result_archive)], countdown=600)
+    delete_file_task.apply_async(args=[str(result_archive)], countdown=ARCHIVE_LIFETIME_SECONDS)
     return result_archive
