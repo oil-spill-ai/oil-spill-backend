@@ -21,7 +21,7 @@ celery_app.conf.update(
 # Периодическая задача для очистки старых файлов (Celery Beat)
 celery_app.conf.beat_schedule = {
     "cleanup-old-files": {
-        "task": "tasks.cleanup_old_files",
-        "schedule": 600.0,  # Каждые 10 минут
+        "task": "cleanup_old_files",
+        "schedule": 60.0,  # Каждую минуту
     },
 }

@@ -8,7 +8,7 @@ from api import router
 
 app = FastAPI(
     title="Oil Spill Detection Backend",
-    max_upload_size=100_000_000  # 100MB
+    max_upload_size=50_000_000  # 50MB
 )
 
 app.add_middleware(

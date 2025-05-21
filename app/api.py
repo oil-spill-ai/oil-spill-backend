@@ -44,11 +44,11 @@ async def upload_archive(request: Request, file: UploadFile = File(...)):
     job_id = str(uuid.uuid4())
     archive_path = os.path.join(UPLOAD_DIR, f"{job_id}_{file.filename}")
 
-    # Сохраняем архив
+    # Сохраняем исходный архив
     with open(archive_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # Распаковка архива
+    # Распаковка исходного архива
     extract_dir = archive_path + "_extracted"
     extract_archive(archive_path, extract_dir)
 
@@ -59,7 +59,6 @@ async def upload_archive(request: Request, file: UploadFile = File(...)):
             file_path = os.path.join(extract_dir, filename)
             task = process_image.delay(job_id, file_path)
             task_ids.append(task.id)
-
 
     return {
         "job_id": job_id,
@@ -72,8 +71,8 @@ async def upload_archive(request: Request, file: UploadFile = File(...)):
 def create_result_archive(job_id: str):
     """Создает архив с результатами для указанного job_id, если все задачи завершены успешно."""
     # Проверим, что все задачи для job_id завершены
-    # Для простоты предполагаем, что имена файлов в results/{job_id}/processed совпадают с исходными
-    processed_dir = os.path.join(RESULT_DIR, job_id, "processed")
+    # Для простоты предполагаем, что имена файлов в results/{job_id} совпадают с исходными
+    processed_dir = os.path.join(RESULT_DIR, job_id)
     if not os.path.exists(processed_dir):
         raise HTTPException(status_code=404, detail="Results not found for this job_id")
     # Проверка наличия файлов
@@ -84,6 +83,7 @@ def create_result_archive(job_id: str):
     result_zip_path = os.path.join(RESULT_DIR, f"{job_id}_result.zip")
     create_archive(processed_dir, result_zip_path)
     return {"archive_url": f"/api/download/{os.path.basename(result_zip_path)}"}
+
 
 @router.get("/download/{filename}")
 def download_result(filename: str):

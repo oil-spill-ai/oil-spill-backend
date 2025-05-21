@@ -4,6 +4,7 @@ import shutil
 import requests
 from datetime import datetime, timedelta
 from pathlib import Path
+from utils import create_archive
 
 ML_SERVICE_URL = "http://localhost:8002"  # URL ML-сервиса
 UPLOAD_DIR = "uploads"
@@ -12,7 +13,7 @@ RESULT_DIR = "results"
 @celery_app.task(name="process_image")
 def process_image(job_id: str, file_path: str):
     """Обрабатывает изображение в ML-сервис и сохраняет результат."""
-    output_dir = Path(RESULT_DIR) / job_id / "processed"
+    output_dir = Path(RESULT_DIR) / job_id
     output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -38,12 +39,16 @@ def process_image(job_id: str, file_path: str):
                     "error": f"Failed to connect to ML service: {str(e)}"
                 }
         if response.status_code == 200:
-            # Сохраняем результат (проверка что это изображение)
+            # Сохраняем результат (проверка на изображение)
             content_type = response.headers.get('Content-Type', '')
             if 'image' in content_type:
                 output_path = output_dir / Path(file_path).name
                 with open(output_path, 'wb') as out_file:
                     out_file.write(response.content)
+
+                processed_dir = os.path.join(RESULT_DIR, job_id)
+                result_zip_path = os.path.join(RESULT_DIR, f"{job_id}_result.zip")
+                create_archive(processed_dir, result_zip_path)
                 return {
                     "status": "success",
                     "job_id": job_id,
@@ -70,9 +75,9 @@ def process_image(job_id: str, file_path: str):
 
 @celery_app.task(name="cleanup_old_files")
 def cleanup_old_files():
-    """Удаляет файлы старше 24 часов."""
+    """Удаляет файлы старше 1 минуты."""
     now = datetime.now()
-    cutoff = now - timedelta(hours=24)
+    cutoff = now - timedelta(minutes=1)
 
     for root, dirs, files in os.walk(RESULT_DIR):
         for name in dirs + files:
