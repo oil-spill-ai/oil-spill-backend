@@ -48,7 +48,7 @@ docker run --name redis-container -p 6379:6379 -d redis
 2. Запустите Celery worker:
 
 ```bash
-celery -A app.tasks worker --loglevel=info
+celery -A app worker --loglevel=info
 ```
 
 - Переменные окружения `CELERY_BROKER_URL` и `CELERY_RESULT_BACKEND` по умолчанию указывают на `redis://localhost:6379/0`.
