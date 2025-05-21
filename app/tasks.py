@@ -6,7 +6,7 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-ML_SERVICE_URL = "http://localhost:8002"  # URL ML-сервиса
+ML_SERVICE_URL = os.environ.get("ML_SERVICE_URL", "http://localhost:8002")  # URL ML-сервиса
 UPLOAD_DIR = "uploads"
 RESULT_DIR = "results"
 MEDIA_DIR = "media"
@@ -18,31 +18,51 @@ def process_image(job_id: str, file_path: str):
     output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
+        # Определяем mime-type по расширению файла
+        ext = Path(file_path).suffix.lower()
+        if ext in [".jpg", ".jpeg"]:
+            mime = "image/jpeg"
+        elif ext == ".png":
+            mime = "image/png"
+        else:
+            mime = "application/octet-stream"
         # Отправка файла в ML-сервис
         with open(file_path, 'rb') as f:
-            response = requests.post(
-                f"{ML_SERVICE_URL}/segment",
-                files={'file': (Path(file_path).name, f, 'image/jpeg')},
-                timeout=30
-            )
-
+            try:
+                response = requests.post(
+                    f"{ML_SERVICE_URL}/segment",
+                    files={'file': (Path(file_path).name, f, mime)},
+                    timeout=30
+                )
+            except Exception as e:
+                return {
+                    "status": "error",
+                    "error": f"Failed to connect to ML service: {str(e)}"
+                }
         if response.status_code == 200:
-            # Сохраняем результат
-            output_path = output_dir / Path(file_path).name
-            with open(output_path, 'wb') as out_file:
-                out_file.write(response.content)
-
+            # Сохраняем результат (проверка что это изображение)
+            content_type = response.headers.get('Content-Type', '')
+            if 'image' in content_type:
+                output_path = output_dir / Path(file_path).name
+                with open(output_path, 'wb') as out_file:
+                    out_file.write(response.content)
+                return {
+                    "status": "success",
+                    "job_id": job_id,
+                    "processed_path": str(output_path)
+                }
+            else:
+                return {
+                    "status": "error",
+                    "error": "ML service did not return an image",
+                    "details": response.text
+                }
+        else:
             return {
-                "status": "success",
-                "job_id": job_id,
-                "processed_path": str(output_path)
+                "status": "error",
+                "error": f"ML service error: {response.status_code}",
+                "details": response.text
             }
-
-        return {
-            "status": "error",
-            "error": f"ML service error: {response.status_code}",
-            "details": response.text
-        }
 
     except Exception as e:
         return {

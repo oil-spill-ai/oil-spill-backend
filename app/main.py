@@ -28,6 +28,20 @@ app.add_middleware(
 app.include_router(router, prefix="/api")
 
 # Статические файлы (frontend)
+from fastapi.responses import FileResponse
+from starlette.requests import Request
+from starlette.responses import Response
+
 frontend_dir = os.path.join(os.path.dirname(__file__), "frontend", "out")  # путь до сборки фронта
 if os.path.exists(frontend_dir):
-    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+    class SPAStaticFiles(StaticFiles):
+        async def get_response(self, path, scope):
+            try:
+                response = await super().get_response(path, scope)
+                if response.status_code == 404:
+                    # Если не найдено — отдаём index.html (SPA fallback)
+                    return await super().get_response("index.html", scope)
+                return response
+            except Exception:
+                return await super().get_response("index.html", scope)
+    app.mount("/", SPAStaticFiles(directory=frontend_dir, html=True), name="frontend")
