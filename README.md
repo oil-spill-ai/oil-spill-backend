@@ -34,7 +34,7 @@ pip install -r requirements.txt
 2. Запустите FastAPI сервер (например, через uvicorn):
 
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 ## Запуск Celery worker и Redis
@@ -42,13 +42,13 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 1. Запустите Redis сервер (если не запущен):
 
 ```bash
-redis-server
+docker run --name redis-container -p 6379:6379 -d redis
 ```
 
 2. Запустите Celery worker:
 
 ```bash
-celery -A app.celery_worker.celery_app worker --loglevel=info
+celery -A app.tasks worker --loglevel=info
 ```
 
 - Переменные окружения `CELERY_BROKER_URL` и `CELERY_RESULT_BACKEND` по умолчанию указывают на `redis://localhost:6379/0`.
