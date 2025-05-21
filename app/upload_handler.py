@@ -1,7 +1,7 @@
 import hashlib
 import os
 import uuid
-from typing import Optional
+
 
 def generate_job_id(user_id: str, filename: str) -> str:
     """Генерирует уникальный job_id."""

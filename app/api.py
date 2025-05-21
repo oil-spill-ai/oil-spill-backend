@@ -11,10 +11,8 @@ router = APIRouter()
 
 UPLOAD_DIR = "uploads"
 RESULT_DIR = "results"
-MEDIA_DIR = "media"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(RESULT_DIR, exist_ok=True)
-os.makedirs(MEDIA_DIR, exist_ok=True)
 
 
 @router.post("/upload/")
@@ -74,8 +72,8 @@ async def upload_archive(request: Request, file: UploadFile = File(...)):
 def create_result_archive(job_id: str):
     """Создает архив с результатами для указанного job_id, если все задачи завершены успешно."""
     # Проверим, что все задачи для job_id завершены
-    # Для простоты предполагаем, что имена файлов в media/{job_id}/processed совпадают с исходными
-    processed_dir = os.path.join(MEDIA_DIR, job_id, "processed")
+    # Для простоты предполагаем, что имена файлов в results/{job_id}/processed совпадают с исходными
+    processed_dir = os.path.join(RESULT_DIR, job_id, "processed")
     if not os.path.exists(processed_dir):
         raise HTTPException(status_code=404, detail="Results not found for this job_id")
     # Проверка наличия файлов

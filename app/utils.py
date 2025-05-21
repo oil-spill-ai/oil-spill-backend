@@ -1,9 +1,6 @@
 import os
 import zipfile
 import shutil
-from PIL import Image
-import base64
-from io import BytesIO
 
 
 def extract_archive(archive_path: str, extract_to: str):

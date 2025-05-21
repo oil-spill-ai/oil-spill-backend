@@ -2,19 +2,17 @@ from celery_app import celery_app
 import os
 import shutil
 import requests
-import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-ML_SERVICE_URL = os.environ.get("ML_SERVICE_URL", "http://localhost:8002")  # URL ML-сервиса
+ML_SERVICE_URL = "http://localhost:8002"  # URL ML-сервиса
 UPLOAD_DIR = "uploads"
 RESULT_DIR = "results"
-MEDIA_DIR = "media"
 
 @celery_app.task(name="process_image")
 def process_image(job_id: str, file_path: str):
     """Обрабатывает изображение в ML-сервис и сохраняет результат."""
-    output_dir = Path(MEDIA_DIR) / job_id / "processed"
+    output_dir = Path(RESULT_DIR) / job_id / "processed"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -76,7 +74,7 @@ def cleanup_old_files():
     now = datetime.now()
     cutoff = now - timedelta(hours=24)
 
-    for root, dirs, files in os.walk(MEDIA_DIR):
+    for root, dirs, files in os.walk(RESULT_DIR):
         for name in dirs + files:
             path = Path(root) / name
             if path.stat().st_mtime < cutoff.timestamp():
