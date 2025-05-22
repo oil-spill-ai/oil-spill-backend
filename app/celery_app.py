@@ -17,11 +17,3 @@ celery_app.conf.update(
     timezone="UTC",
     enable_utc=True,
 )
-
-# Периодическая задача для очистки старых файлов (Celery Beat)
-celery_app.conf.beat_schedule = {
-    "cleanup-old-files": {
-        "task": "cleanup_old_files",
-        "schedule": 60.0,  # Каждую минуту
-    },
-}

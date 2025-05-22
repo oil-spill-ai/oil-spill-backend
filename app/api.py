@@ -42,7 +42,7 @@ async def upload_archive(request: Request, file: UploadFile = File(...)):
 
     # Генерация job_id и путей
     job_id = str(uuid.uuid4())
-    archive_path = os.path.join(UPLOAD_DIR, f"{job_id}_{file.filename}")
+    archive_path = os.path.join(UPLOAD_DIR, f"{job_id}")
 
     # Сохраняем исходный архив
     with open(archive_path, "wb") as buffer:
@@ -67,29 +67,14 @@ async def upload_archive(request: Request, file: UploadFile = File(...)):
     }
 
 
-@router.get("/archive/{job_id}")
-def create_result_archive(job_id: str):
-    """Создает архив с результатами для указанного job_id, если все задачи завершены успешно."""
-    # Проверим, что все задачи для job_id завершены
-    # Для простоты предполагаем, что имена файлов в results/{job_id} совпадают с исходными
-    processed_dir = os.path.join(RESULT_DIR, job_id)
-    if not os.path.exists(processed_dir):
-        raise HTTPException(status_code=404, detail="Results not found for this job_id")
-    # Проверка наличия файлов
-    files = [f for f in os.listdir(processed_dir) if os.path.isfile(os.path.join(processed_dir, f))]
-    if not files:
-        raise HTTPException(status_code=400, detail="No processed files found. Wait for tasks to complete.")
-    # Создаем архив
-    result_zip_path = os.path.join(RESULT_DIR, f"{job_id}_result.zip")
-    create_archive(processed_dir, result_zip_path)
-    return {"archive_url": f"/api/download/{os.path.basename(result_zip_path)}"}
-
-
 @router.get("/download/{filename}")
 def download_result(filename: str):
     file_path = os.path.join(RESULT_DIR, filename)
     if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="File not found")
+        raise HTTPException(
+            status_code=410,  # 410 Gone - ресурс больше недоступен
+            detail="Архив с результатами был автоматически удален. Пожалуйста, загрузите файлы заново."
+        )
     return FileResponse(file_path, filename=filename)
 
 

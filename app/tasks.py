@@ -2,7 +2,7 @@ from celery_app import celery_app
 import os
 import shutil
 import requests
-from datetime import datetime, timedelta
+import glob
 from pathlib import Path
 from utils import create_archive
 
@@ -39,16 +39,29 @@ def process_image(job_id: str, file_path: str):
                     "error": f"Failed to connect to ML service: {str(e)}"
                 }
         if response.status_code == 200:
-            # Сохраняем результат (проверка на изображение)
+            # Сохраняем результат
             content_type = response.headers.get('Content-Type', '')
             if 'image' in content_type:
                 output_path = output_dir / Path(file_path).name
                 with open(output_path, 'wb') as out_file:
                     out_file.write(response.content)
 
+                # Создаем архив с результатами
                 processed_dir = os.path.join(RESULT_DIR, job_id)
                 result_zip_path = os.path.join(RESULT_DIR, f"{job_id}_result.zip")
                 create_archive(processed_dir, result_zip_path)
+
+                # Удаляем исходный архив
+                original_archive = os.path.join(UPLOAD_DIR, f"{job_id}_*.zip")
+                for archive in glob.glob(original_archive):
+                    os.remove(archive)
+
+                # Запускаем задачу на удаление исходных файлов через 30 секунд
+                cleanup_original_files.apply_async((job_id,), countdown=30)
+
+                # Запускаем задачу на удаление результатов через 10 минут
+                cleanup_job_files.apply_async((job_id,), countdown=600)
+
                 return {
                     "status": "success",
                     "job_id": job_id,
@@ -73,17 +86,27 @@ def process_image(job_id: str, file_path: str):
             "error": str(e)
         }
 
-@celery_app.task(name="cleanup_old_files")
-def cleanup_old_files():
-    """Удаляет файлы старше 1 минуты."""
-    now = datetime.now()
-    cutoff = now - timedelta(minutes=1)
 
-    for root, dirs, files in os.walk(RESULT_DIR):
-        for name in dirs + files:
-            path = Path(root) / name
-            if path.stat().st_mtime < cutoff.timestamp():
-                if path.is_dir():
-                    shutil.rmtree(path)
-                else:
-                    path.unlink()
+@celery_app.task(name="cleanup_original_files")
+def cleanup_original_files(job_id: str):
+    """Удаляет исходные файлы конкретного job_id через 30 секунд после создания итогового архива."""
+
+    # Ищем папки, которые начинаются с job_id и заканчиваются на .zip_extracted
+    matching_dirs = glob.glob(os.path.join(UPLOAD_DIR, f"{job_id}*.zip_extracted"))
+
+    # Удаляем все найденные папки (если их несколько)
+    for dir_path in matching_dirs:
+        if os.path.isdir(dir_path):
+            shutil.rmtree(dir_path)
+
+
+@celery_app.task(name="cleanup_job_files")
+def cleanup_job_files(job_id: str):
+    """Удаляет файлы конкретного job_id через 10 минут после создания итогового архива."""
+    processed_dir = os.path.join(RESULT_DIR, job_id)
+    result_zip_path = os.path.join(RESULT_DIR, f"{job_id}_result.zip")
+
+    if os.path.exists(processed_dir):
+        shutil.rmtree(processed_dir)
+    if os.path.exists(result_zip_path):
+        os.remove(result_zip_path)
