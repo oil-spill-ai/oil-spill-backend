@@ -78,19 +78,13 @@ def create_result_archive(user_hash: str) -> Path:
     result_files = []
     archive_name = f"result_{user_hash}.zip"
     for file in user_dir.iterdir():
-        if file.name.startswith("result_") and file.name != archive_name:
+        if file.name.startswith("result_") and file.name != archive_name and not file.name.endswith(".meta"):
             new_name = file.name.replace("result_", "").replace(f"_{user_hash}", "")
             result_files.append((file, new_name))
     result_archive = user_dir / archive_name
     with zipfile.ZipFile(result_archive, 'w') as zipf:
         for file, new_name in result_files:
             zipf.write(file, arcname=new_name)
-    # После создания архива удалить обработанные файлы
-    for file, _ in result_files:
-        try:
-            os.remove(file)
-        except Exception as e:
-            print(f"[WARN] Не удалось удалить обработанный файл {file}: {e}")
     # Сохраняем время создания архива в meta-файл
     meta_path = get_meta_path(result_archive)
     with open(meta_path, 'w') as f:
